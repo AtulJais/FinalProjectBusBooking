@@ -1,0 +1,11 @@
+spring:
+  application:
+    name: API-GATEWAY    
+
+okta:
+  oauth2:
+    issuer: https://dev-72292284.okta.com/oauth2/default
+    audience: api://default
+    client-id: 0oagxrs2dvjtLpqHf5d7
+    client-secret: 0cOLga8VqHm0-BxMmdOrDaNx6kjjzI96Zr5ta3vt0gbdpp3_uYbEFSqy5zdtyCWX
+    scopes: openid, profile, email, offline_access
