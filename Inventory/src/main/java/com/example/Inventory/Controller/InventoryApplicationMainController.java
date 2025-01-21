@@ -186,7 +186,6 @@ public class InventoryApplicationMainController {
 		
 		
 		PaymentEvent p = new ObjectMapper().readValue(paymentEvent, PaymentEvent.class);
-		//CustomerOrder order = p.getOrder();
 		int remainingSeat = 0;
 		CustomerOrder order = p.getOrder();
 		int payid = p.getPid();
@@ -204,7 +203,7 @@ public class InventoryApplicationMainController {
 		   
 		   if( Integer.parseInt(availableSeat) > NoOfSeat)
 		   {
-			   logger.info("Checking inventory again with updated seat 4");
+			   logger.info("Checking inventory again with updated seat ");
 			   remainingSeat= Integer.parseInt(availableSeat) - NoOfSeat;
 			    busInventoryModel.setAvailable_seats(String.valueOf(remainingSeat));
 				busInventoryModel.setBus_number(order.getBus_number());
@@ -218,10 +217,12 @@ public class InventoryApplicationMainController {
 			order.setAvailableSeat(String.valueOf(remainingSeat));
 			inventoryEvent.setOrder(p.getOrder());
 			inventoryEvent.setType("Inventory_Updated");
-			logger.info("Message send to Order");
 			
+			logger.info("Message send to Order/bboking ms");
 			kafkaTemplate.send("new-booking", inventoryEvent);
-			return ResponseEntity.ok("Seat saved and Message send to Order");
+			
+			return ResponseEntity.ok("Seat saved and Message send to Order/booking ms");
+			
 		} catch (Exception e) {
 			PaymentEvent pe = new PaymentEvent();
 			pe.setOrder(order);
@@ -229,10 +230,8 @@ public class InventoryApplicationMainController {
 			pe.setType("PAYMENT_REVERSED");
 			kafkaPaymentTemplate.send("reversed-payments", pe);
 		
-			return ResponseEntity.ok("Exception in saving Payment and error message send to inventory");
-		
-			//return ResponseEntity.ok("Exception in Inventory update and error message send to booking order");
-		
+			return ResponseEntity.ok("Exception in saving order and error message send to payment ");
+				
 		}
 	
 	
