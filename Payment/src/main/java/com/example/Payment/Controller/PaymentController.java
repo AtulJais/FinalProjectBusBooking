@@ -147,7 +147,7 @@ public class PaymentController {
 				return ResponseEntity.ok("Issue in deletePAymentDetailsById  data");
 			}
 		}
-	//kafka change
+	//new booking payment process using Kafka
 		@KafkaListener(topics = "new-orders", groupId = "orders-group")
 		public ResponseEntity<?>  processPayment(String event) throws JsonMappingException, JsonProcessingException {
 			System.out.println("Recieved event for payment " + event);
@@ -161,12 +161,11 @@ public class PaymentController {
 	            payment.setBooking_number(order.getBooking_number());
 	            payment.setPayment_date(new Date());
 	            payment.setStatus("Success");
-	           
 				logger.info("updating in payment table");
 				Paymentmodel pay = 	paymentService.addPaymentDetail(payment);
+				
 			int payid=	pay.getPayment_id();
     			logger.info("updated in payment table");
-			//	PaymentEvent paymentEvent = new PaymentEvent();
 				paymentEvent.setOrder(orderEvent.getOrder());
 				paymentEvent.setType("PAYMENT_CREATED");
 				paymentEvent.setPid(payid);
