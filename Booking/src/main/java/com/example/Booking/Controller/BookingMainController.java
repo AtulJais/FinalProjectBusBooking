@@ -92,7 +92,7 @@ public class BookingMainController {
 		
 	
 	}
-	
+	//Simple Add booking API without using KAfka implementation
 	@PostMapping("addBookingDetails")
 	public ResponseEntity<?> addBookingDetails(@RequestBody BookingModel bookingModel)
 	{	
@@ -175,68 +175,7 @@ public class BookingMainController {
 
 	}
 	
-	
-	/*
-	 * //booking service call to inventory
-	 * 
-	 * @PostMapping("availableSeatss/{id}") public ResponseEntity<?>
-	 * getavailableSeats(@RequestBody BookingModel bookingModel , @PathVariable int
-	 * id) { //org.springframework.http.HttpStatus httpstaus = null; Map<String,
-	 * Object> successmap = new HashMap<String, Object>(); Map<String, Object>
-	 * failmap = new HashMap<String, Object>(); String available_seats = null; try {
-	 * logger.
-	 * info("Inside available seat webflux call to get detail of bus nos from inventory"
-	 * ); String abc=webClient.get().uri("/Inventory/getBusRouteDetailsById/"+id)
-	 * .retrieve() .bodyToMono(String.class) .block();
-	 * 
-	 * 
-	 * 
-	 * JSONObject jsonObj= new JSONObject(abc.toString());
-	 * 
-	 * if (jsonObj.has("available_seats") ) {
-	 * logger.info("Taking out available seat for that bus number"); available_seats
-	 * = (String) jsonObj.get("available_seats"); System.out.print(available_seats);
-	 * }
-	 * 
-	 * } catch(Exception e) { logger.info("issue in calling inventrory service "+e);
-	 * failmap.put("message", "Issue in calling inventory service");
-	 * failmap.put("status_code", HttpStatus.SC_INTERNAL_SERVER_ERROR); return
-	 * ResponseEntity.ok(failmap); }
-	 * 
-	 * ArrayList _listquery = (ArrayList) bookingModel.getPassenger_model();
-	 * 
-	 * if (Integer.parseInt(available_seats) > _listquery.size() ) {
-	 * logger.info("checking available seat with passanger count"); try {
-	 * 
-	 * bookingModel.setBus_number(id); int finalseat =
-	 * Integer.parseInt(available_seats) - _listquery.size() ;
-	 * bookingModel.setNos_of_seats(finalseat);
-	 * logger.info("Inserting passenger detail and booking detail in respective db"
-	 * ); if(bookingService.addUserDetailsinventory(bookingModel)) {
-	 * successmap.put("Bookingmessage", "Updated booking detail ");
-	 * successmap.put("Passenger","Updated Passenger details"); String
-	 * seatUpdated=webClient.put().uri(
-	 * "http://localhost:8090//Inventory/updateBusSeatDetails/"+id+"/"+finalseat)
-	 * .retrieve() .bodyToMono(String.class) .block();
-	 * logger.info("updated remaining seat after booking in inventory table");
-	 * successmap.put(
-	 * "InventoryMessage","Udated Inventory details with remaining seat"); }
-	 * successmap.put("status_code", HttpStatus.SC_CREATED); return
-	 * ResponseEntity.ok(successmap);
-	 * 
-	 * } catch(Exception e) { // map.put("error", "Issue in Updating booking data");
-	 * failmap.put("message", "Issue in Updating booking data");
-	 * failmap.put("status_code", HttpStatus.SC_INTERNAL_SERVER_ERROR); return
-	 * ResponseEntity.ok(failmap); } } else { failmap.put("message",
-	 * "Available seat is less than passenger number"); failmap.put("status_code",
-	 * HttpStatus.SC_INTERNAL_SERVER_ERROR); return ResponseEntity.ok(failmap);
-	 * 
-	 * }
-	 * 
-	 * }
-	 */
-	
-	//kafka change
+	//add or create booking details using kafka
 	@PostMapping("availableSeats/{id}")
 	public ResponseEntity<?> getavailableSeatss(@RequestBody BookingModel bookingModel , @PathVariable String id)
 	{
@@ -245,18 +184,18 @@ public class BookingMainController {
 		Map<String, Object> failmap = new HashMap<String, Object>();
 		String available_seats = null;
 	try {
-		logger.info("Inside available seat webflux call to get detail of bus nos from inventory");
-		String abc=webClient.get().uri("/Inventory/getBusRouteDetailsById/"+id)
+		logger.info("Inside available seat webflux call to get details of bus nos from inventory microservices");
+		String busDetails=webClient.get().uri("/Inventory/getBusRouteDetailsById/"+id)
 	                         .retrieve()
 	                                 .bodyToMono(String.class)
 	                                         .block();
 		
 		
 		
-		JSONObject jsonObj= new JSONObject(abc.toString());
+		JSONObject jsonObj= new JSONObject(busDetails.toString());
 		
 	if (jsonObj.has("available_seats") ) {
-		logger.info("Taking out available seat for that bus number");	
+		logger.info("Finding out available seat for required bus number");	
 		available_seats =	(String) jsonObj.get("available_seats");
 		System.out.print(available_seats);
 		}
@@ -264,25 +203,25 @@ public class BookingMainController {
 	}
 	catch(Exception e)
 	{
-		logger.info("issue in calling inventrory service "+e);
-		failmap.put("message", "Issue in calling inventory service");
+		logger.info("issue in calling inventrory microservices "+e);
+		failmap.put("message", "Issue in calling inventory microservices");
 		failmap.put("status_code", HttpStatus.SC_INTERNAL_SERVER_ERROR);
 		return ResponseEntity.ok(failmap);
 	}
-		
+		//Finding out passanger count from passanger model
 		ArrayList _listquery = (ArrayList) bookingModel.getPassenger_model();
 		
+		//checking available seat with passanger count
 		if (Integer.parseInt(available_seats)   > _listquery.size() )
 		{
 			logger.info("checking available seat with passanger count");
 			try
 			{
-	
-				bookingModel.setBus_number(Integer.parseInt(id));
-				//int finalseat = Integer.parseInt(available_seats) - _listquery.size() ;
-				//bookingModel.setNos_of_seats(finalseat);
 				logger.info("Inserting  booking detail and status as pending");
+				bookingModel.setBus_number(Integer.parseInt(id));
        			bookingModel.setStatus("Pending");
+       			
+       			
 				BookingModel bm = bookingService.addUserDetailsinventorys(bookingModel);
 				co.setStatus(bm.getStatus());
 			    co.setBooking_number(bm.getBooking_number());
@@ -292,11 +231,14 @@ public class BookingMainController {
 				co.setSource(bm.getSource());
 				co.setAvailableSeat(Integer.parseInt(available_seats));
 				co.setPassenger_model(_listquery);
+				
+				//send messgae through kafka to payment for new booking
 				OrderEvent event = new OrderEvent();
 			    event.setOrder(co);
 				event.setType("ORDER_CREATED");
-				logger.info("Message send to payment for successfull booking");
+				logger.info("Message send to payment for new booking/new order created");
 				kafkaTemplate.send("new-orders", event);
+				
 				successmap.put("Booking NO :", bm.getBooking_number());
 				successmap.put("Status :", bm.getStatus());
 				successmap.put("Nos_of_seats :", bm.getNos_of_seats());
@@ -354,7 +296,7 @@ public class BookingMainController {
 		}
 	
 	}
-	//kafka to cancel booking
+	//kafka implementation to cancel booking
 	@KafkaListener(topics = "reversed-orders", groupId = "orders-group")
 	public void reverseOrder(String event) {
 		System.out.println("Inside reverse order for order "+event);
@@ -373,7 +315,7 @@ public class BookingMainController {
 		}
 	}
 	
-	//api to cancel booking
+	//api to cancel booking/order
 	@PutMapping("CancelBooking/{bookingNumber}")
 	public ResponseEntity<?> CancelBooking( @PathVariable int bookingNumber)
 	{
@@ -421,10 +363,6 @@ public class BookingMainController {
 	
 	
 	}
-	
-	
-	//API to cancel 
-	
 	
 	
 }

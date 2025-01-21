@@ -11,7 +11,7 @@ import com.fasterxml.jackson.annotation.JsonBackReference;
 
 @Entity
 @Transactional
-@Table(name = "Passenger_Model")
+@Table(name = "PASSENDER_DETAIL")
 public class PassengerModel {
 	
 	
